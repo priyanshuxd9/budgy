@@ -1,0 +1,75 @@
+@import url('https://fonts.googleapis.com/css2?family=Patrick+Hand&display=swap');
+
+:root {
+  --paper-color: #fdfbf7;
+  --line-color: #e1e1e1;
+  --margin-line-color: #ff9999;
+  --text-color: #2c3e50;
+  --ink-blue: #0000ee;
+  --pencil-gray: #555;
+  --highlight-yellow: rgba(255, 255, 0, 0.3);
+  
+  --spacing: 2rem; /* Matches line height loosely */
+}
+
+/* Reset & Base */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Patrick Hand', cursive;
+  font-size: 1.25rem;
+  line-height: var(--spacing);
+  color: var(--text-color);
+  background-color: #555; /* Desk background */
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  padding: 20px;
+}
+
+#root {
+  width: 100%;
+  max-width: 600px;
+}
+
+/* Typography */
+h1, h2, h3 {
+  font-weight: 700;
+  margin-bottom: var(--spacing);
+  color: #000;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
+  background: none;
+}
+
+input {
+  font-family: inherit;
+  background: transparent;
+  border: none;
+  font-size: inherit;
+  color: inherit;
+  outline: none;
+}
+
+/* Utilities */
+.text-red { color: #d32f2f; }
+.text-green { color: #2e7d32; }
+.bold { font-weight: bold; }
+.underline { text-decoration: underline; }
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: #ccc;
+  border-radius: 4px;
+}
