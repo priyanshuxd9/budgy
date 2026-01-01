@@ -39,8 +39,8 @@ const Auth = () => {
     return (
         <div style={{ maxWidth: '400px', margin: '0 auto', textAlign: 'center' }}>
             <h1 style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>Budgy</h1>
-            <p style={{ fontStyle: 'italic', opacity: 0.8, marginBottom: '2rem' }}>
-                Get your money right, tight & bright! 🌟
+            <p style={{ fontWeight: 'bold', opacity: 0.8, marginBottom: '2rem' }}>
+                Get your money right, tight & bright!
             </p>
 
             <form onSubmit={handleAuth} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>

@@ -8,7 +8,7 @@ import FieldDetail from './components/FieldDetail';
 import TotalsDisplay from './components/TotalsDisplay';
 import DateFilter from './components/DateFilter';
 import Auth from './components/Auth';
-import { Plus } from 'lucide-react';
+import { Plus, Info } from 'lucide-react';
 
 function App() {
   const [session, setSession] = useState(null);
@@ -21,6 +21,39 @@ function App() {
   const [isAdding, setIsAdding] = useState(false);
   const [newFieldName, setNewFieldName] = useState('');
   const [newFieldType, setNewFieldType] = useState('money_out');
+  const [newFieldRecurring, setNewFieldRecurring] = useState(false);
+  // ... [imports and state above]
+
+  // ... [skipping to confirmAddField] 
+
+  const confirmAddField = async () => {
+    if (!newFieldName || !session) return;
+
+    // Determine target date (1st of currently selected month)
+    const targetDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+
+    const { data, error } = await supabase
+      .from('user_fields')
+      .insert([{
+        user_id: session.user.id,
+        label: newFieldName,
+        type: newFieldType,
+        value: 0, // Legacy
+        is_recurring: newFieldRecurring,
+        target_date: targetDate.toISOString()
+      }])
+      .select();
+
+    if (error) {
+      console.error('Error adding field:', error);
+    } else {
+      setFields([...fields, ...data]);
+      setIsAdding(false);
+      setNewFieldName('');
+      setNewFieldType('money_out');
+      setNewFieldRecurring(false); // Reset
+    }
+  };
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -73,8 +106,22 @@ function App() {
 
       // Filter in memory for soft deletes logic as Supabase simple filtering might be tricky with "OR" on null
       const visibleFields = (fieldsData || []).filter(field => {
-        if (!field.deleted_at) return true;
-        return new Date(field.deleted_at) > new Date(startOfMonth);
+        // Deletion Check
+        if (field.deleted_at && new Date(field.deleted_at) <= startOfMonth) {
+          return false; // Deleted before this month started
+        }
+
+        // Relevance Check
+        if (field.is_recurring) return true; // Repeats every month
+
+        if (field.target_date) {
+          const target = new Date(field.target_date);
+          // Check if same month and year
+          return target.getFullYear() === date.getFullYear() && target.getMonth() === date.getMonth();
+        }
+
+        // Fallback for old fields without target_date/is_recurring: assume recurring
+        return true;
       });
 
       // 2. Fetch Entries for this Month
@@ -148,28 +195,7 @@ function App() {
     }
   };
 
-  const confirmAddField = async () => {
-    if (!newFieldName || !session) return;
 
-    const { data, error } = await supabase
-      .from('user_fields')
-      .insert([{
-        user_id: session.user.id,
-        label: newFieldName,
-        type: newFieldType,
-        value: 0 // Legacy
-      }])
-      .select();
-
-    if (error) {
-      console.error('Error adding field:', error);
-    } else {
-      setFields([...fields, ...data]);
-      setIsAdding(false);
-      setNewFieldName('');
-      setNewFieldType('money_out');
-    }
-  };
 
   // Helper for INR currency
   const formatCurrency = (val) => {
@@ -257,10 +283,63 @@ function App() {
                           <option value="money_out">Expense/EMI (e.g. Rent)</option>
                         </select>
                       </div>
+
+                      <div style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <input
+                          type="checkbox"
+                          id="recurring-check"
+                          checked={newFieldRecurring}
+                          onChange={e => setNewFieldRecurring(e.target.checked)}
+                        />
+                        <label htmlFor="recurring-check" style={{ fontSize: '0.9rem', cursor: 'pointer' }}>Repeat every month?</label>
+                        <div className="tooltip-container" style={{ position: 'relative', display: 'flex' }}>
+                          <Info size={16} style={{ cursor: 'help', opacity: 0.6 }} />
+                          <span className="tooltip-text">
+                            Checked: Field appears in all future months.<br />
+                            Unchecked: Field only exists in THIS month.
+                          </span>
+                        </div>
+                      </div>
+
                       <div style={{ display: 'flex', gap: '1rem' }}>
                         <button onClick={confirmAddField} className="text-green bold">Save</button>
                         <button onClick={() => setIsAdding(false)} className="text-red">Cancel</button>
                       </div>
+
+                      <style>{`
+                            .tooltip-container:hover .tooltip-text {
+                                visibility: visible;
+                                opacity: 1;
+                            }
+                            .tooltip-text {
+                                visibility: hidden;
+                                width: 200px;
+                                background-color: #555;
+                                color: #fff;
+                                text-align: center;
+                                border-radius: 6px;
+                                padding: 5px;
+                                position: absolute;
+                                z-index: 1;
+                                bottom: 125%;
+                                left: 50%;
+                                margin-left: -100px;
+                                opacity: 0;
+                                transition: opacity 0.3s;
+                                font-size: 0.8rem;
+                                font-weight: normal;
+                            }
+                            .tooltip-text::after {
+                                content: "";
+                                position: absolute;
+                                top: 100%;
+                                left: 50%;
+                                margin-left: -5px;
+                                border-width: 5px;
+                                border-style: solid;
+                                border-color: #555 transparent transparent transparent;
+                            }
+                        `}</style>
                     </div>
                   )}
                 </div>
