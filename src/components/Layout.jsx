@@ -10,13 +10,12 @@ const Layout = () => {
           <Outlet />
         </div>
       </div>
-      
+
       <style>{`
         .notepad-wrapper {
           position: relative;
           width: 100%;
-          min-height: 80vh;
-          filter: drop-shadow(2px 4px 6px rgba(0,0,0,0.3));
+          min-height: 100vh;
         }
 
         .paper {
@@ -25,10 +24,9 @@ const Layout = () => {
           background-size: 100% var(--spacing);
           background-position: 0 1.5rem; /* Align lines */
           width: 100%;
-          min-height: 80vh;
+          min-height: 100vh;
           padding: 3rem 1.5rem 2rem 4rem; /* Top Right Bottom Left(for margin) */
           position: relative;
-          border-radius: 2px;
         }
 
         /* Red Margin Line */

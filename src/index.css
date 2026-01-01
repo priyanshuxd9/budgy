@@ -8,8 +8,9 @@
   --ink-blue: #0000ee;
   --pencil-gray: #555;
   --highlight-yellow: rgba(255, 255, 0, 0.3);
-  
-  --spacing: 2rem; /* Matches line height loosely */
+
+  --spacing: 2rem;
+  /* Matches line height loosely */
 }
 
 /* Reset & Base */
@@ -24,20 +25,18 @@ body {
   font-size: 1.25rem;
   line-height: var(--spacing);
   color: var(--text-color);
-  background-color: #555; /* Desk background */
+  background-color: var(--paper-color);
   min-height: 100vh;
-  display: flex;
-  justify-content: center;
-  padding: 20px;
 }
 
 #root {
   width: 100%;
-  max-width: 600px;
 }
 
 /* Typography */
-h1, h2, h3 {
+h1,
+h2,
+h3 {
   font-weight: 700;
   margin-bottom: var(--spacing);
   color: #000;
@@ -60,15 +59,27 @@ input {
 }
 
 /* Utilities */
-.text-red { color: #d32f2f; }
-.text-green { color: #2e7d32; }
-.bold { font-weight: bold; }
-.underline { text-decoration: underline; }
+.text-red {
+  color: #d32f2f;
+}
+
+.text-green {
+  color: #2e7d32;
+}
+
+.bold {
+  font-weight: bold;
+}
+
+.underline {
+  text-decoration: underline;
+}
 
 /* Scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
 }
+
 ::-webkit-scrollbar-thumb {
   background: #ccc;
   border-radius: 4px;

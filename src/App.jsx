@@ -88,14 +88,10 @@ function App() {
 
   const fetchData = async (userId, date) => {
     try {
-      // 1. Fetch Fields Structure
-      // Soft Delete Login: Show if not deleted OR deleted AFTER the start of the current view month
-      // actually, simpler: Show if not deleted. If we want history preservation (seeing deleted fields in past months),
-      // we need to check if deleted_at > startOfMonth.
-
       const startOfMonth = new Date(date.getFullYear(), date.getMonth(), 1).toISOString();
       const endOfMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0, 23, 59, 59).toISOString();
 
+      // 1. Fetch Fields
       let query = supabase
         .from('user_fields')
         .select('*')
@@ -104,27 +100,56 @@ function App() {
       const { data: fieldsData, error: fieldsError } = await query;
       if (fieldsError) throw fieldsError;
 
-      // Filter in memory for soft deletes logic as Supabase simple filtering might be tricky with "OR" on null
+      // 2. Fetch Exclusions for this month (for recurring fields)
+      // fetch entries where excluded_date matches startOfMonth
+      const { data: exclusionsData, error: exclusionsError } = await supabase
+        .from('field_exclusions')
+        .select('field_id')
+        .eq('excluded_date', startOfMonth);
+
+      if (exclusionsError) throw exclusionsError;
+
+      const excludedFieldIds = new Set((exclusionsData || []).map(e => e.field_id));
+
+      // Filter Logic
       const visibleFields = (fieldsData || []).filter(field => {
-        // Deletion Check
-        if (field.deleted_at && new Date(field.deleted_at) <= startOfMonth) {
-          return false; // Deleted before this month started
+        // A. Global Soft Delete check (User deleted 'completely' or non-recurring field)
+        // XOR logic: If it has deleted_at, was it before the end of this month?
+        // If deleted on Jan 15, viewing Jan -> deleted_at <= endOfJan. Hidden.
+        // If deleted on Jan 15, viewing Feb -> deleted_at <= endOfFeb. Hidden.
+        // If deleted on Jan 15, viewing Dec (past) -> deleted_at (Jan) > endOfDec (Dec). Visible.
+        if (field.deleted_at && new Date(field.deleted_at) <= new Date(endOfMonth)) {
+          return false;
         }
 
-        // Relevance Check
-        if (field.is_recurring) return true; // Repeats every month
+        // B. Recurring vs Monthly
+        if (field.is_recurring) {
+          // 1. Creation Date Check: Field shouldn't exist in months before it was created.
+          // e.g. Created Feb 2026. Viewing Jan 2026.
+          // created_at (Feb) > endOfMonth (Jan). -> Hide.
+          // (Relaxed slighty: timestamp comparison)
+          if (new Date(field.created_at) > new Date(endOfMonth)) {
+            return false;
+          }
 
-        if (field.target_date) {
-          const target = new Date(field.target_date);
-          // Check if same month and year
-          return target.getFullYear() === date.getFullYear() && target.getMonth() === date.getMonth();
+          // 2. Exclusion Check: Did user delete this specifically for this month?
+          if (excludedFieldIds.has(field.id)) {
+            return false;
+          }
+
+          return true;
+        } else {
+          // Monthly Field (Specific Date)
+          if (field.target_date) {
+            const target = new Date(field.target_date);
+            return target.getFullYear() === date.getFullYear() && target.getMonth() === date.getMonth();
+          }
+          // Fallback (Legacy)
+          return true;
         }
-
-        // Fallback for old fields without target_date/is_recurring: assume recurring
-        return true;
       });
 
-      // 2. Fetch Entries for this Month
+      // 3. Fetch Entries for this Month
       const { data: entriesData, error: entriesError } = await supabase
         .from('field_entries')
         .select('*')
@@ -179,8 +204,34 @@ function App() {
   };
 
   const handleDelete = async (id) => {
-    if (confirm('Are you sure you want to delete this field?')) {
-      // Soft Delete
+    if (!confirm('Are you sure you want to delete this field?')) return;
+
+    const field = fields.find(f => f.id === id);
+    if (!field) return;
+
+    if (field.is_recurring) {
+      // Recurring Field: Only remove from THIS month (create exclusion)
+      // We use the 1st of the current month as the key
+      const startOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).toISOString();
+
+      const { error } = await supabase
+        .from('field_exclusions')
+        .insert([{
+          field_id: id,
+          excluded_date: startOfMonth
+        }]);
+
+      if (error) {
+        console.error('Exclusion failed:', error);
+        alert('Failed to delete recurring field');
+      } else {
+        // Remove locally
+        setFields(fields.filter(f => f.id !== id));
+      }
+
+    } else {
+      // Monthly (or Legacy) Field: Soft Delete (hide permanently from now on)
+      // Since it's monthly, it will only hide from this month anyway (if logic holds)
       const { error } = await supabase
         .from('user_fields')
         .update({ deleted_at: new Date().toISOString() })
@@ -189,7 +240,6 @@ function App() {
       if (error) {
         console.error('Delete failed:', error);
       } else {
-        // Remove from local state immediately
         setFields(fields.filter(f => f.id !== id));
       }
     }
